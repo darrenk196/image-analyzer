@@ -1,0 +1,35 @@
+{
+  "name": "image-analyzer",
+  "version": "0.1.0",
+  "description": "Image analysis tool for artists",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "tauri": "tauri"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.4.2",
+    "@tauri-apps/plugin-opener": "^2"
+  },
+  "devDependencies": {
+    "@skeletonlabs/skeleton": "^2.11.0",
+    "@skeletonlabs/tw-plugin": "^0.4.1",
+    "@sveltejs/adapter-static": "^3.0.4",
+    "@sveltejs/kit": "^2.8.6",
+    "@sveltejs/vite-plugin-svelte": "^3.1.2",
+    "@tauri-apps/cli": "^2.9.6",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "svelte": "^4.2.19",
+    "svelte-check": "^3.8.6",
+    "tailwindcss": "^3.4.13",
+    "typescript": "~5.6.2",
+    "vite": "^5.4.10"
+  }
+}
