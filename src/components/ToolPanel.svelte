@@ -52,6 +52,17 @@
   <h3 class="text-sm font-semibold text-surface-200">Analysis Tools</h3>
 
   <button
+    on:click={() => selectTool("adjustments")}
+    class={`btn w-full text-left justify-start ${
+      $imageStore.activeTool === "adjustments"
+        ? "variant-filled-primary"
+        : "variant-ghost"
+    }`}
+  >
+    🛠️ Adjustments
+  </button>
+
+  <button
     on:click={() => selectTool("value-simplification")}
     class={`btn w-full text-left justify-start ${
       $imageStore.activeTool === "value-simplification"

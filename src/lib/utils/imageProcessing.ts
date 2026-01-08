@@ -3,6 +3,8 @@
  */
 
 import { hexToRgb, findClosestPaletteColor } from './palettes';
+import type { ImageData as AppImageData } from '../api/types';
+import type { AdjustmentsState, CropBox } from '../stores/imageStore';
 
 export interface RGBA {
   r: number;
@@ -322,4 +324,190 @@ export function mapColorsToPalette(
     ...color,
     hex: findClosestPaletteColor(color.r, color.g, color.b, paletteColors),
   }));
+}
+
+function clampByte(value: number): number {
+  return Math.min(255, Math.max(0, Math.round(value)));
+}
+
+export function applyToneAdjustments(
+  imageData: AppImageData,
+  settings: AdjustmentsState
+): AppImageData {
+  const data = new Uint8ClampedArray(imageData.data);
+  const result = new Uint8ClampedArray(data.length);
+
+  const brightnessFactor = 1 + settings.brightness;
+  const exposureFactor = Math.pow(2, settings.exposure);
+  const contrastFactor = 1 + settings.contrast;
+  const saturationFactor = 1 + settings.saturation;
+
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i];
+    let g = data[i + 1];
+    let b = data[i + 2];
+    const a = data[i + 3];
+
+    // Exposure + brightness
+    r *= exposureFactor * brightnessFactor;
+    g *= exposureFactor * brightnessFactor;
+    b *= exposureFactor * brightnessFactor;
+
+    // Contrast around mid-gray
+    r = (r - 128) * contrastFactor + 128;
+    g = (g - 128) * contrastFactor + 128;
+    b = (b - 128) * contrastFactor + 128;
+
+    // Warmth adjustment (tilt red/blue balance)
+    if (settings.warmth !== 0) {
+      const warmthFactor = 1 + settings.warmth * 0.25;
+      r *= warmthFactor;
+      b *= 1 / warmthFactor;
+    }
+
+    const lum = getLuminosity(r, g, b);
+
+    // Shadows
+    if (settings.shadows !== 0 && lum < 128) {
+      const shadowFactor = 1 + settings.shadows * (1 - lum / 128);
+      r *= shadowFactor;
+      g *= shadowFactor;
+      b *= shadowFactor;
+    }
+
+    // Highlights
+    if (settings.highlights !== 0 && lum > 128) {
+      const highlightFactor = 1 + settings.highlights * ((lum - 128) / 128);
+      r *= highlightFactor;
+      g *= highlightFactor;
+      b *= highlightFactor;
+    }
+
+    // Saturation using perceptual luminance
+    if (saturationFactor !== 1) {
+      const gray = lum;
+      r = gray + (r - gray) * saturationFactor;
+      g = gray + (g - gray) * saturationFactor;
+      b = gray + (b - gray) * saturationFactor;
+    }
+
+    result[i] = clampByte(r);
+    result[i + 1] = clampByte(g);
+    result[i + 2] = clampByte(b);
+    result[i + 3] = a;
+  }
+
+  return {
+    ...imageData,
+    data: Array.from(result),
+  };
+}
+
+export function rotateImageData(
+  imageData: AppImageData,
+  degrees: number
+): AppImageData {
+  if (typeof document === 'undefined') return imageData;
+
+  const normalized = ((degrees % 360) + 360) % 360;
+  if (Math.abs(normalized) < 0.001) return imageData;
+
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = imageData.width;
+  srcCanvas.height = imageData.height;
+  const srcCtx = srcCanvas.getContext('2d');
+  if (!srcCtx) return imageData;
+
+  const srcData = new globalThis.ImageData(
+    new Uint8ClampedArray(imageData.data),
+    imageData.width,
+    imageData.height
+  );
+  srcCtx.putImageData(srcData, 0, 0);
+
+  const radians = (normalized * Math.PI) / 180;
+  const sin = Math.abs(Math.sin(radians));
+  const cos = Math.abs(Math.cos(radians));
+  const destWidth = Math.max(1, Math.round(imageData.width * cos + imageData.height * sin));
+  const destHeight = Math.max(1, Math.round(imageData.width * sin + imageData.height * cos));
+
+  const destCanvas = document.createElement('canvas');
+  destCanvas.width = destWidth;
+  destCanvas.height = destHeight;
+  const destCtx = destCanvas.getContext('2d');
+  if (!destCtx) return imageData;
+
+  destCtx.translate(destWidth / 2, destHeight / 2);
+  destCtx.rotate(radians);
+  destCtx.drawImage(srcCanvas, -imageData.width / 2, -imageData.height / 2);
+
+  const rotated = destCtx.getImageData(0, 0, destWidth, destHeight);
+  return {
+    width: destWidth,
+    height: destHeight,
+    format: imageData.format,
+    data: Array.from(rotated.data),
+  };
+}
+
+export function cropImageData(
+  imageData: AppImageData,
+  crop: CropBox | null
+): AppImageData {
+  if (!crop) return imageData;
+  if (typeof document === 'undefined') return imageData;
+
+  const startX = Math.max(0, Math.floor(crop.x * imageData.width));
+  const startY = Math.max(0, Math.floor(crop.y * imageData.height));
+  const width = Math.max(1, Math.floor(crop.width * imageData.width));
+  const height = Math.max(1, Math.floor(crop.height * imageData.height));
+  const safeWidth = Math.min(width, imageData.width - startX);
+  const safeHeight = Math.min(height, imageData.height - startY);
+
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = imageData.width;
+  sourceCanvas.height = imageData.height;
+  const sourceCtx = sourceCanvas.getContext('2d');
+  if (!sourceCtx) return imageData;
+
+  const sourceData = new globalThis.ImageData(
+    new Uint8ClampedArray(imageData.data),
+    imageData.width,
+    imageData.height
+  );
+  sourceCtx.putImageData(sourceData, 0, 0);
+
+  const destCanvas = document.createElement('canvas');
+  destCanvas.width = safeWidth;
+  destCanvas.height = safeHeight;
+  const destCtx = destCanvas.getContext('2d');
+  if (!destCtx) return imageData;
+
+  destCtx.drawImage(sourceCanvas, -startX, -startY);
+  const cropped = destCtx.getImageData(0, 0, safeWidth, safeHeight);
+
+  return {
+    width: safeWidth,
+    height: safeHeight,
+    format: imageData.format,
+    data: Array.from(cropped.data),
+  };
+}
+
+export function applyAdjustments(
+  imageData: AppImageData,
+  settings: AdjustmentsState,
+  options: { applyCrop?: boolean } = {}
+): AppImageData {
+  let working = applyToneAdjustments(imageData, settings);
+
+  if (Math.abs(settings.rotation % 360) > 0.001) {
+    working = rotateImageData(working, settings.rotation);
+  }
+
+  if (options.applyCrop && settings.crop) {
+    working = cropImageData(working, settings.crop);
+  }
+
+  return working;
 }

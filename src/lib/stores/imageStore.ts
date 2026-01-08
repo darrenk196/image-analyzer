@@ -1,6 +1,26 @@
 import { writable, derived } from 'svelte/store';
 import type { ImageData, AnalysisResult } from '../api/types';
 
+export interface CropBox {
+  x: number; // 0-1 normalized
+  y: number; // 0-1 normalized
+  width: number; // 0-1 normalized
+  height: number; // 0-1 normalized
+}
+
+export interface AdjustmentsState {
+  brightness: number; // -1..1
+  exposure: number; // -2..2 stops
+  contrast: number; // -1..1
+  saturation: number; // -1..1
+  warmth: number; // -1..1
+  highlights: number; // -1..1
+  shadows: number; // -1..1
+  rotation: number; // degrees
+  crop: CropBox | null;
+  cropMode: boolean; // interactive crop mode
+}
+
 export interface ImageStore {
   current: ImageData | null;
   history: ImageData[];
@@ -10,7 +30,14 @@ export interface ImageStore {
   brightness: number;
   contrast: number;
   saturations: number;
-  activeTool: 'none' | 'value-simplification' | 'grid' | 'measure' | 'color-picker';
+  activeTool:
+    | 'none'
+    | 'adjustments'
+    | 'value-simplification'
+    | 'grid'
+    | 'measure'
+    | 'color-picker';
+  adjustments: AdjustmentsState;
   valueSimplification: {
     enabled: boolean;
     levels: number;
@@ -23,6 +50,21 @@ export interface ImageStore {
   };
 }
 
+function defaultAdjustments(): AdjustmentsState {
+  return {
+    brightness: 0,
+    exposure: 0,
+    contrast: 0,
+    saturation: 0,
+    warmth: 0,
+    highlights: 0,
+    shadows: 0,
+    rotation: 0,
+    crop: null,
+    cropMode: false,
+  };
+}
+
 const initialState: ImageStore = {
   current: null,
   history: [],
@@ -32,7 +74,8 @@ const initialState: ImageStore = {
   brightness: 1,
   contrast: 1,
   saturations: 1,
-  activeTool: 'none',
+  activeTool: 'adjustments',
+  adjustments: defaultAdjustments(),
   valueSimplification: {
     enabled: false,
     levels: 5,
@@ -56,6 +99,7 @@ function createImageStore() {
         current: image,
         history: [...state.history, image],
         historyIndex: state.history.length,
+        adjustments: defaultAdjustments(),
       })),
     setAnalysis: (analysis: AnalysisResult) =>
       update((state) => ({ ...state, analysis })),
@@ -68,6 +112,16 @@ function createImageStore() {
       update((state) => ({ ...state, saturations })),
     setActiveTool: (tool: ImageStore['activeTool']) =>
       update((state) => ({ ...state, activeTool: tool })),
+    updateAdjustments: (partial: Partial<AdjustmentsState>) =>
+      update((state) => ({
+        ...state,
+        adjustments: { ...state.adjustments, ...partial },
+      })),
+    resetAdjustments: () =>
+      update((state) => ({
+        ...state,
+        adjustments: defaultAdjustments(),
+      })),
     setValueSimplificationEnabled: (enabled: boolean) =>
       update((state) => ({
         ...state,
