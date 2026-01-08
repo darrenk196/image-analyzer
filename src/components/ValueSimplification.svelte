@@ -96,7 +96,11 @@
       <div class="control-item">
         <div class="control-label-row">
           <span class="control-label">Value Levels</span>
-          <span class="control-value">{pendingUpdate ? "Updating" : $imageStore.valueSimplification.levels}</span>
+          <span class="control-value"
+            >{pendingUpdate
+              ? "Updating"
+              : $imageStore.valueSimplification.levels}</span
+          >
         </div>
         <input
           id="value-levels"
@@ -116,7 +120,9 @@
       <div class="control-item">
         <div class="control-label-row">
           <span class="control-label">Opacity</span>
-          <span class="control-value">{Math.round($imageStore.valueSimplification.opacity * 100)}%</span>
+          <span class="control-value"
+            >{Math.round($imageStore.valueSimplification.opacity * 100)}%</span
+          >
         </div>
         <input
           id="value-opacity"
@@ -212,7 +218,9 @@
 
       {#if $imageStore.valueSimplification.paletteEnabled}
         <div class="control-item">
-          <label for="palette-select" class="control-label small">Palette Selection</label>
+          <label for="palette-select" class="control-label small"
+            >Palette Selection</label
+          >
           <select
             id="palette-select"
             value={$imageStore.valueSimplification.selectedPalette}
@@ -233,11 +241,16 @@
           {#if palettes[$imageStore.valueSimplification.selectedPalette]}
             <div class="palette-preview">
               <p class="hint-text">
-                {palettes[$imageStore.valueSimplification.selectedPalette].description}
+                {palettes[$imageStore.valueSimplification.selectedPalette]
+                  .description}
               </p>
               <div class="palette-swatches">
                 {#each palettes[$imageStore.valueSimplification.selectedPalette].colors as color}
-                  <div class="swatch" style={`background-color: ${color}`} title={color}></div>
+                  <div
+                    class="swatch"
+                    style={`background-color: ${color}`}
+                    title={color}
+                  ></div>
                 {/each}
               </div>
             </div>
@@ -251,7 +264,10 @@
       {#if $imageStore.valueSimplification.extractedColors.length > 0}
         <div class="color-list">
           {#each $imageStore.valueSimplification.extractedColors as color, idx (idx)}
-            <button class="color-row" on:click={() => copyColorToClipboard(color.hex)}>
+            <button
+              class="color-row"
+              on:click={() => copyColorToClipboard(color.hex)}
+            >
               <div
                 class="color-chip"
                 style={`background-color: rgb(${color.r}, ${color.g}, ${color.b})`}
