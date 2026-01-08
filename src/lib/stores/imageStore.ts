@@ -10,6 +10,17 @@ export interface ImageStore {
   brightness: number;
   contrast: number;
   saturations: number;
+  activeTool: 'none' | 'value-simplification' | 'grid' | 'measure' | 'color-picker';
+  valueSimplification: {
+    enabled: boolean;
+    levels: number;
+    opacity: number;
+    extractedColors: Array<{ r: number; g: number; b: number; hex: string }>;
+    paintByNumbersEnabled: boolean;
+    paintByNumbersMode: 'lines' | 'blocks';
+    paletteEnabled: boolean;
+    selectedPalette: string; // Key from palettes object
+  };
 }
 
 const initialState: ImageStore = {
@@ -21,6 +32,17 @@ const initialState: ImageStore = {
   brightness: 1,
   contrast: 1,
   saturations: 1,
+  activeTool: 'none',
+  valueSimplification: {
+    enabled: false,
+    levels: 5,
+    opacity: 1,
+    extractedColors: [],
+    paintByNumbersEnabled: false,
+    paintByNumbersMode: 'blocks' as const,
+    paletteEnabled: false,
+    selectedPalette: 'zorn',
+  },
 };
 
 function createImageStore() {
@@ -44,6 +66,48 @@ function createImageStore() {
     setContrast: (contrast: number) => update((state) => ({ ...state, contrast })),
     setSaturation: (saturations: number) =>
       update((state) => ({ ...state, saturations })),
+    setActiveTool: (tool: ImageStore['activeTool']) =>
+      update((state) => ({ ...state, activeTool: tool })),
+    setValueSimplificationEnabled: (enabled: boolean) =>
+      update((state) => ({
+        ...state,
+        valueSimplification: { ...state.valueSimplification, enabled },
+      })),
+    setValueSimplificationLevels: (levels: number) =>
+      update((state) => ({
+        ...state,
+        valueSimplification: { ...state.valueSimplification, levels },
+      })),
+    setValueSimplificationOpacity: (opacity: number) =>
+      update((state) => ({
+        ...state,
+        valueSimplification: { ...state.valueSimplification, opacity },
+      })),
+    setExtractedColors: (colors: Array<{ r: number; g: number; b: number; hex: string }>) =>
+      update((state) => ({
+        ...state,
+        valueSimplification: { ...state.valueSimplification, extractedColors: colors },
+      })),
+    setPaintByNumbersEnabled: (enabled: boolean) =>
+      update((state) => ({
+        ...state,
+        valueSimplification: { ...state.valueSimplification, paintByNumbersEnabled: enabled },
+      })),
+    setPaintByNumbersMode: (mode: 'lines' | 'blocks') =>
+      update((state) => ({
+        ...state,
+        valueSimplification: { ...state.valueSimplification, paintByNumbersMode: mode },
+      })),
+    setPaletteEnabled: (enabled: boolean) =>
+      update((state) => ({
+        ...state,
+        valueSimplification: { ...state.valueSimplification, paletteEnabled: enabled },
+      })),
+    setSelectedPalette: (paletteKey: string) =>
+      update((state) => ({
+        ...state,
+        valueSimplification: { ...state.valueSimplification, selectedPalette: paletteKey },
+      })),
     undo: () =>
       update((state) => {
         if (state.historyIndex > 0) {

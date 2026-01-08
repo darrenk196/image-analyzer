@@ -1,6 +1,6 @@
 <script lang="ts">
   import { imageStore, isProcessing } from "$lib/stores/imageStore";
-  import { loadImage, analyzeImage } from "$lib/api/imageApi";
+  import { loadImage } from "$lib/api/imageApi";
   import { open } from "@tauri-apps/plugin-dialog";
 
   async function openImage() {
@@ -16,17 +16,23 @@
 
       if (selected && typeof selected === "string") {
         imageStore.setProcessing(true);
-        const imageData = await loadImage(selected);
-        imageStore.setImage(imageData);
-
-        const analysis = await analyzeImage(imageData);
-        imageStore.setAnalysis(analysis);
+        try {
+          const imageData = await loadImage(selected);
+          imageStore.setImage(imageData);
+        } catch (error) {
+          console.error("Error loading image:", error);
+          alert("Failed to load image. Make sure it's a valid image file.");
+        }
         imageStore.setProcessing(false);
       }
     } catch (error) {
-      console.error("Error loading image:", error);
+      console.error("Error opening file dialog:", error);
       imageStore.setProcessing(false);
     }
+  }
+
+  function selectTool(tool: typeof $imageStore.activeTool) {
+    imageStore.setActiveTool(tool);
   }
 </script>
 
@@ -38,17 +44,59 @@
     disabled={$isProcessing}
     class="btn variant-filled-primary w-full"
   >
-    {$isProcessing ? "Loading..." : "Open Image"}
+    {$isProcessing ? "Loading..." : "📁 Open Image"}
   </button>
 
   <div class="divider"></div>
 
-  <h3 class="text-sm font-semibold text-surface-200">Tools</h3>
+  <h3 class="text-sm font-semibold text-surface-200">Analysis Tools</h3>
 
-  <button class="btn variant-ghost w-full text-left"> 📏 Measure </button>
-  <button class="btn variant-ghost w-full text-left"> 🎨 Color Picker </button>
-  <button class="btn variant-ghost w-full text-left"> 🔲 Grid </button>
-  <button class="btn variant-ghost w-full text-left"> 👁️ Value Checker </button>
+  <button
+    on:click={() => selectTool("value-simplification")}
+    class={`btn w-full text-left justify-start ${
+      $imageStore.activeTool === "value-simplification"
+        ? "variant-filled-primary"
+        : "variant-ghost"
+    }`}
+  >
+    🎨 Value Simplify
+  </button>
+
+  <button
+    on:click={() => selectTool("grid")}
+    class={`btn w-full text-left justify-start ${
+      $imageStore.activeTool === "grid"
+        ? "variant-filled-primary"
+        : "variant-ghost"
+    }`}
+    disabled
+  >
+    🔲 Grid (Coming soon)
+  </button>
+
+  <button
+    on:click={() => selectTool("measure")}
+    class={`btn w-full text-left justify-start ${
+      $imageStore.activeTool === "measure"
+        ? "variant-filled-primary"
+        : "variant-ghost"
+    }`}
+    disabled
+  >
+    📏 Measure (Coming soon)
+  </button>
+
+  <button
+    on:click={() => selectTool("color-picker")}
+    class={`btn w-full text-left justify-start ${
+      $imageStore.activeTool === "color-picker"
+        ? "variant-filled-primary"
+        : "variant-ghost"
+    }`}
+    disabled
+  >
+    🎯 Color Picker (Coming soon)
+  </button>
 </div>
 
 <style>
