@@ -10,6 +10,7 @@
     generatePaintByNumbersLines,
     generatePaintByNumbersBlocks,
   } from "$lib/utils/paintByNumbers";
+  import EmptyState from "./EmptyState.svelte";
 
   let canvas: HTMLCanvasElement;
   let overlayCanvas: HTMLCanvasElement;
@@ -38,7 +39,10 @@
     scheduleBaseDraw();
   }
 
-  $: if ($imageStore.activeTool === "adjustments" && !$imageStore.adjustments.cropMode) {
+  $: if (
+    $imageStore.activeTool === "adjustments" &&
+    !$imageStore.adjustments.cropMode
+  ) {
     const { filter, transform } = buildCssPreview($imageStore.adjustments);
     previewFilter = filter;
     previewTransform = transform;
@@ -47,28 +51,16 @@
     previewTransform = "none";
   }
 
-  $: if (
-    $imageStore.activeTool === "value-simplification" &&
-    $imageStore.valueSimplification.enabled &&
-    $currentImage
-  ) {
+  $: if ($imageStore.activeTool === "value-simplification" && $currentImage) {
     // Schedule overlay update on next animation frame for smoothness
     if (overlayDrawId) cancelAnimationFrame(overlayDrawId);
     overlayDrawId = requestAnimationFrame(() => {
       overlayDrawId = null;
-      drawValueSimplificationOverlay();
-    });
-  }
-
-  $: if (
-    $imageStore.activeTool === "value-simplification" &&
-    $imageStore.valueSimplification.paintByNumbersEnabled &&
-    $currentImage
-  ) {
-    if (overlayDrawId) cancelAnimationFrame(overlayDrawId);
-    overlayDrawId = requestAnimationFrame(() => {
-      overlayDrawId = null;
-      drawPaintByNumbers();
+      if ($imageStore.valueSimplification.paintByNumbersEnabled) {
+        drawPaintByNumbers();
+      } else {
+        drawValueSimplificationOverlay();
+      }
     });
   }
 
@@ -317,37 +309,32 @@
   class="w-full h-full flex items-center justify-center bg-surface-900 rounded-lg overflow-hidden"
 >
   {#if $currentImage}
-    <div class="relative flex items-center justify-center max-h-full max-w-full p-4">
+    <div class="relative inline-block max-h-full max-w-full">
       <canvas
         bind:this={canvas}
         on:wheel={handleWheel}
         class="border border-surface-700 cursor-crosshair fit-canvas"
-        style={`filter: ${previewFilter}; transform: ${previewTransform}; transform-origin: center;`}
+        style={`filter: ${previewFilter}; transform: ${previewTransform}; transform-origin: center; display: block;`}
       ></canvas>
-      {#if
-        $imageStore.activeTool === "value-simplification" &&
-        $imageStore.valueSimplification.enabled &&
-        !$imageStore.valueSimplification.paintByNumbersEnabled
-      }
+      {#if $imageStore.activeTool === "value-simplification" && !$imageStore.valueSimplification.paintByNumbersEnabled}
         <canvas
           bind:this={overlayCanvas}
           class="absolute top-0 left-0 border border-surface-700 cursor-crosshair fit-canvas"
-          style="mix-blend-mode: normal; transition: opacity 0.2s ease;"
+          style="mix-blend-mode: normal; transition: opacity 0.2s ease; pointer-events: none;"
         ></canvas>
       {/if}
-      {#if
-        $imageStore.activeTool === "value-simplification" &&
-        $imageStore.valueSimplification.paintByNumbersEnabled
-      }
+      {#if $imageStore.activeTool === "value-simplification" && $imageStore.valueSimplification.paintByNumbersEnabled}
         <canvas
           bind:this={paintByNumbersCanvas}
           class="absolute top-0 left-0 border border-surface-700 cursor-crosshair fit-canvas"
-          style="mix-blend-mode: normal; background: white;"
+          style="mix-blend-mode: normal; background: white; pointer-events: none;"
         ></canvas>
       {/if}
       {#if $imageStore.activeTool === "adjustments" && $imageStore.adjustments.cropMode && $imageStore.adjustments.crop}
         <div
           class="absolute inset-0"
+          role="button"
+          tabindex="0"
           on:mousedown={handleCropMouseDown}
           on:mousemove={handleCropMouseMove}
           on:mouseup={handleCropMouseUp}
@@ -362,9 +349,11 @@
           ></div>
           <div
             class="absolute bg-black/60 pointer-events-none"
-            style={`top: ${(($imageStore.adjustments.crop.y +
-              $imageStore.adjustments.crop.height) *
-              100).toFixed(2)}%; left: 0; right: 0; bottom: 0;`}
+            style={`top: ${(
+              ($imageStore.adjustments.crop.y +
+                $imageStore.adjustments.crop.height) *
+              100
+            ).toFixed(2)}%; left: 0; right: 0; bottom: 0;`}
           ></div>
           <div
             class="absolute bg-black/60 pointer-events-none"
@@ -375,8 +364,9 @@
           <div
             class="absolute bg-black/60 pointer-events-none"
             style={`top: ${$imageStore.adjustments.crop.y * 100}%; right: 0; width: ${
-              (1 - ($imageStore.adjustments.crop.x +
-                $imageStore.adjustments.crop.width)) *
+              (1 -
+                ($imageStore.adjustments.crop.x +
+                  $imageStore.adjustments.crop.width)) *
               100
             }%; height: ${$imageStore.adjustments.crop.height * 100}%;`}
           ></div>
@@ -392,10 +382,42 @@
           >
             <!-- Rule of thirds grid -->
             <svg class="absolute inset-0 w-full h-full pointer-events-none">
-              <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="white" stroke-width="1" opacity="0.5" />
-              <line x1="66.66%" y1="0" x2="66.66%" y2="100%" stroke="white" stroke-width="1" opacity="0.5" />
-              <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="white" stroke-width="1" opacity="0.5" />
-              <line x1="0" y1="66.66%" x2="100%" y2="66.66%" stroke="white" stroke-width="1" opacity="0.5" />
+              <line
+                x1="33.33%"
+                y1="0"
+                x2="33.33%"
+                y2="100%"
+                stroke="white"
+                stroke-width="1"
+                opacity="0.5"
+              />
+              <line
+                x1="66.66%"
+                y1="0"
+                x2="66.66%"
+                y2="100%"
+                stroke="white"
+                stroke-width="1"
+                opacity="0.5"
+              />
+              <line
+                x1="0"
+                y1="33.33%"
+                x2="100%"
+                y2="33.33%"
+                stroke="white"
+                stroke-width="1"
+                opacity="0.5"
+              />
+              <line
+                x1="0"
+                y1="66.66%"
+                x2="100%"
+                y2="66.66%"
+                stroke="white"
+                stroke-width="1"
+                opacity="0.5"
+              />
             </svg>
 
             <!-- Corner handles -->
@@ -414,24 +436,97 @@
       {/if}
     </div>
   {:else}
-    <div class="text-center text-surface-400">
-      <p class="text-xl font-semibold">No image loaded</p>
-      <p class="text-sm">Open an image to begin analysis</p>
-    </div>
+    <EmptyState />
   {/if}
 </div>
 
 <style>
+  .w-full {
+    width: 100%;
+  }
+
+  .h-full {
+    height: 100%;
+  }
+
+  .flex {
+    display: flex;
+  }
+
+  .items-center {
+    align-items: center;
+  }
+
+  .justify-center {
+    justify-content: center;
+  }
+
+  .bg-surface-900 {
+    background-color: var(--color-canvas);
+  }
+
+  .rounded-lg {
+    border-radius: 8px;
+  }
+
+  .overflow-hidden {
+    overflow: hidden;
+  }
+
+  .relative {
+    position: relative;
+  }
+
+  .max-h-full {
+    max-height: 100%;
+  }
+
+  .max-w-full {
+    max-width: 100%;
+  }
+
+  .border {
+    border-width: 1px;
+  }
+
+  .border-surface-700 {
+    border-color: var(--color-border-subtle);
+  }
+
+  .cursor-crosshair {
+    cursor: crosshair;
+  }
+
+  .absolute {
+    position: absolute;
+  }
+
+  .top-0 {
+    top: 0;
+  }
+
+  .left-0 {
+    left: 0;
+  }
+
+  .inset-0 {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
   canvas {
     image-rendering: pixelated;
   }
 
   .fit-canvas {
     max-width: 100%;
-    max-height: calc(100vh - 160px);
+    max-height: calc(100vh - 200px);
     width: auto;
     height: auto;
     display: block;
+    border-radius: 4px;
   }
 
   .crop-handle {
@@ -440,14 +535,82 @@
     border: 2px solid rgba(0, 0, 0, 0.5);
     cursor: pointer;
     z-index: 10;
+    transition: all 150ms ease;
   }
 
-  .crop-handle-tl { top: -6px; left: -6px; width: 12px; height: 12px; cursor: nwse-resize; }
-  .crop-handle-tr { top: -6px; right: -6px; width: 12px; height: 12px; cursor: nesw-resize; }
-  .crop-handle-bl { bottom: -6px; left: -6px; width: 12px; height: 12px; cursor: nesw-resize; }
-  .crop-handle-br { bottom: -6px; right: -6px; width: 12px; height: 12px; cursor: nwse-resize; }
-  .crop-handle-t { top: -4px; left: 50%; transform: translateX(-50%); width: 40px; height: 8px; cursor: ns-resize; }
-  .crop-handle-b { bottom: -4px; left: 50%; transform: translateX(-50%); width: 40px; height: 8px; cursor: ns-resize; }
-  .crop-handle-l { top: 50%; left: -4px; transform: translateY(-50%); width: 8px; height: 40px; cursor: ew-resize; }
-  .crop-handle-r { top: 50%; right: -4px; transform: translateY(-50%); width: 8px; height: 40px; cursor: ew-resize; }
+  .crop-handle:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  }
+
+  .crop-handle-tl {
+    top: -6px;
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    cursor: nwse-resize;
+  }
+  .crop-handle-tr {
+    top: -6px;
+    right: -6px;
+    width: 12px;
+    height: 12px;
+    cursor: nesw-resize;
+  }
+  .crop-handle-bl {
+    bottom: -6px;
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    cursor: nesw-resize;
+  }
+  .crop-handle-br {
+    bottom: -6px;
+    right: -6px;
+    width: 12px;
+    height: 12px;
+    cursor: nwse-resize;
+  }
+  .crop-handle-t {
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 8px;
+    cursor: ns-resize;
+  }
+  .crop-handle-b {
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 8px;
+    cursor: ns-resize;
+  }
+  .crop-handle-l {
+    top: 50%;
+    left: -4px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 40px;
+    cursor: ew-resize;
+  }
+  .crop-handle-r {
+    top: 50%;
+    right: -4px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 40px;
+    cursor: ew-resize;
+  }
+
+  .crop-handle-t:hover,
+  .crop-handle-b:hover {
+    transform: translateX(-50%) scaleY(1.2);
+  }
+
+  .crop-handle-l:hover,
+  .crop-handle-r:hover {
+    transform: translateY(-50%) scaleX(1.2);
+  }
 </style>

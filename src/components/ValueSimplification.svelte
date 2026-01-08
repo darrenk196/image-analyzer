@@ -14,8 +14,7 @@
 
   // Debounced color extraction - runs after user stops changing sliders
   const debouncedExtractColors = debounce(async () => {
-    if (!$imageStore.current || !$imageStore.valueSimplification.enabled)
-      return;
+    if (!$imageStore.current) return;
 
     isProcessing = true;
     pendingUpdate = false;
@@ -52,18 +51,8 @@
     debouncedExtractColors();
   }
 
-  function toggleValueSimplification() {
-    imageStore.setValueSimplificationEnabled(
-      !$imageStore.valueSimplification.enabled
-    );
-    if ($imageStore.valueSimplification.enabled) {
-      debouncedExtractColors();
-    }
-  }
-
   function setPreset(levels: number) {
     imageStore.setValueSimplificationLevels(levels);
-    imageStore.setValueSimplificationEnabled(true);
     pendingUpdate = true;
     debouncedExtractColors();
   }
@@ -86,53 +75,28 @@
     pendingUpdate = true;
     debouncedExtractColors();
   }
+
+  // Auto-extract colors when switching to this tool
+  $: if (
+    $imageStore.activeTool === "value-simplification" &&
+    $imageStore.current
+  ) {
+    debouncedExtractColors();
+  }
 </script>
 
-<div class="flex flex-col gap-4 h-full bg-surface-800 p-4 rounded-lg">
-  <h2 class="text-lg font-bold text-surface-50">Value Simplification</h2>
+<div class="adjustments-panel">
+  <h2 class="panel-title">Value Simplification</h2>
 
   {#if !$imageStore.current}
-    <div class="text-sm text-surface-400">Load an image to use this tool</div>
+    <p class="empty-message">Load an image to start.</p>
   {:else}
-    <!-- Toggle Switch -->
-    <div class="flex items-center justify-between">
-      <label for="enable-toggle" class="text-sm font-medium text-surface-200"
-        >Enable</label
-      >
-      <button
-        id="enable-toggle"
-        on:click={toggleValueSimplification}
-        role="switch"
-        aria-checked={$imageStore.valueSimplification.enabled}
-        class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          $imageStore.valueSimplification.enabled
-            ? "bg-primary-500"
-            : "bg-surface-600"
-        }`}
-      >
-        <span
-          class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-            $imageStore.valueSimplification.enabled
-              ? "translate-x-6"
-              : "translate-x-1"
-          }`}
-        ></span>
-      </button>
-    </div>
-
-    {#if $imageStore.valueSimplification.enabled}
-      <!-- Level Slider -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <label
-            for="value-levels"
-            class="text-sm font-medium text-surface-200"
-          >
-            Value Levels {pendingUpdate ? "(updating...)" : ""}
-          </label>
-          <span class="text-sm font-semibold text-primary-400">
-            {$imageStore.valueSimplification.levels}
-          </span>
+    <section class="control-section">
+      <h3 class="section-header">LEVELS</h3>
+      <div class="control-item">
+        <div class="control-label-row">
+          <span class="control-label">Value Levels</span>
+          <span class="control-value">{pendingUpdate ? "Updating" : $imageStore.valueSimplification.levels}</span>
         </div>
         <input
           id="value-levels"
@@ -141,26 +105,18 @@
           max="10"
           value={$imageStore.valueSimplification.levels}
           on:input={handleLevelChange}
-          class="w-full h-2 bg-surface-700 rounded-lg appearance-none cursor-pointer"
-          style="accent-color: rgb(var(--color-primary-500))"
+          class="slider"
         />
-        <div class="flex gap-2 text-xs text-surface-400">
-          <span>2</span>
-          <span class="flex-1"></span>
-          <span>10</span>
-        </div>
+        <div class="slider-scale"><span>2</span><span>10</span></div>
       </div>
+    </section>
 
-      <!-- Opacity Slider -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <label
-            for="value-opacity"
-            class="text-sm font-medium text-surface-200">Opacity</label
-          >
-          <span class="text-sm font-semibold text-primary-400">
-            {Math.round($imageStore.valueSimplification.opacity * 100)}%
-          </span>
+    <section class="control-section">
+      <h3 class="section-header">OPACITY</h3>
+      <div class="control-item">
+        <div class="control-label-row">
+          <span class="control-label">Opacity</span>
+          <span class="control-value">{Math.round($imageStore.valueSimplification.opacity * 100)}%</span>
         </div>
         <input
           id="value-opacity"
@@ -169,270 +125,403 @@
           max="1"
           step="0.1"
           value={$imageStore.valueSimplification.opacity}
-          on:input={(e) => {
+          on:input={(e) =>
             imageStore.setValueSimplificationOpacity(
               parseFloat(e.currentTarget.value)
-            );
-          }}
-          class="w-full h-2 bg-surface-700 rounded-lg appearance-none cursor-pointer"
-          style="accent-color: rgb(var(--color-primary-500))"
+            )}
+          class="slider"
         />
       </div>
+    </section>
 
-      <div class="divider"></div>
+    <section class="control-section">
+      <h3 class="section-header">PRESETS</h3>
+      <div class="preset-row">
+        {#each [3, 5, 8] as level, idx}
+          <button
+            class={`chip ${$imageStore.valueSimplification.levels === level ? "active" : ""}`}
+            on:click={() => setPreset(level)}
+          >
+            {idx === 0 ? "Quick" : idx === 1 ? "Standard" : "Detail"}
+          </button>
+        {/each}
+      </div>
+    </section>
 
-      <!-- Presets -->
-      <div class="space-y-2">
-        <p class="text-sm font-medium text-surface-200">Presets</p>
-        <div class="grid grid-cols-3 gap-2">
-          <button
-            on:click={() => setPreset(3)}
-            class={`btn text-xs py-1 ${
-              $imageStore.valueSimplification.levels === 3
-                ? "variant-filled-primary"
-                : "variant-ghost"
-            }`}
-          >
-            Quick
-          </button>
-          <button
-            on:click={() => setPreset(5)}
-            class={`btn text-xs py-1 ${
-              $imageStore.valueSimplification.levels === 5
-                ? "variant-filled-primary"
-                : "variant-ghost"
-            }`}
-          >
-            Standard
-          </button>
-          <button
-            on:click={() => setPreset(8)}
-            class={`btn text-xs py-1 ${
-              $imageStore.valueSimplification.levels === 8
-                ? "variant-filled-primary"
-                : "variant-ghost"
-            }`}
-          >
-            Detail
-          </button>
-        </div>
+    <section class="control-section">
+      <h3 class="section-header">PAINT BY NUMBERS</h3>
+      <div class="toggle-row">
+        <span class="control-label">Enable</span>
+        <button
+          class={`switch ${$imageStore.valueSimplification.paintByNumbersEnabled ? "active" : ""}`}
+          on:click={() =>
+            imageStore.setPaintByNumbersEnabled(
+              !$imageStore.valueSimplification.paintByNumbersEnabled
+            )}
+          aria-pressed={$imageStore.valueSimplification.paintByNumbersEnabled}
+        >
+          <span class="switch-thumb"></span>
+        </button>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- Paint by Numbers Section -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <label
-            for="paint-by-numbers-toggle"
-            class="text-sm font-medium text-surface-200"
-          >
-            Paint by Numbers
-          </label>
+      {#if $imageStore.valueSimplification.paintByNumbersEnabled}
+        <div class="mode-grid">
           <button
-            id="paint-by-numbers-toggle"
-            on:click={() =>
-              imageStore.setPaintByNumbersEnabled(
-                !$imageStore.valueSimplification.paintByNumbersEnabled
-              )}
-            role="switch"
-            aria-checked={$imageStore.valueSimplification.paintByNumbersEnabled}
-            class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              $imageStore.valueSimplification.paintByNumbersEnabled
-                ? "bg-primary-500"
-                : "bg-surface-600"
+            class={`chip ${
+              $imageStore.valueSimplification.paintByNumbersMode === "blocks"
+                ? "active"
+                : ""
             }`}
+            on:click={() => imageStore.setPaintByNumbersMode("blocks")}
           >
-            <span
-              class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                $imageStore.valueSimplification.paintByNumbersEnabled
-                  ? "translate-x-6"
-                  : "translate-x-1"
-              }`}
-            ></span>
+            Color Blocks
+          </button>
+          <button
+            class={`chip ${
+              $imageStore.valueSimplification.paintByNumbersMode === "lines"
+                ? "active"
+                : ""
+            }`}
+            on:click={() => imageStore.setPaintByNumbersMode("lines")}
+          >
+            Line Guide
           </button>
         </div>
-
-        {#if $imageStore.valueSimplification.paintByNumbersEnabled}
-          <!-- Mode Toggle -->
-          <div class="space-y-2">
-            <p class="text-xs font-semibold text-surface-300">
-              Reference Style
-            </p>
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                on:click={() => imageStore.setPaintByNumbersMode("blocks")}
-                class={`btn text-xs py-2 ${
-                  $imageStore.valueSimplification.paintByNumbersMode ===
-                  "blocks"
-                    ? "variant-filled-primary"
-                    : "variant-ghost"
-                }`}
-              >
-                🎨 Color Blocks
-              </button>
-              <button
-                on:click={() => imageStore.setPaintByNumbersMode("lines")}
-                class={`btn text-xs py-2 ${
-                  $imageStore.valueSimplification.paintByNumbersMode === "lines"
-                    ? "variant-filled-primary"
-                    : "variant-ghost"
-                }`}
-              >
-                ✏️ Line Guide
-              </button>
-            </div>
-          </div>
-
-          <p class="text-xs text-surface-400 italic">
-            {#if $imageStore.valueSimplification.paintByNumbersMode === "blocks"}
-              Solid color blocks for painting reference
-            {:else}
-              Outlined regions for drawing guide
-            {/if}
-          </p>
-        {/if}
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- Color Palette Selection Section -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <label
-            for="palette-toggle"
-            class="text-sm font-medium text-surface-200"
-          >
-            Apply Color Palette
-          </label>
-          <button
-            id="palette-toggle"
-            on:click={togglePalette}
-            role="switch"
-            aria-checked={$imageStore.valueSimplification.paletteEnabled}
-            class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              $imageStore.valueSimplification.paletteEnabled
-                ? "bg-primary-500"
-                : "bg-surface-600"
-            }`}
-          >
-            <span
-              class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                $imageStore.valueSimplification.paletteEnabled
-                  ? "translate-x-6"
-                  : "translate-x-1"
-              }`}
-            ></span>
-          </button>
-        </div>
-
-        {#if $imageStore.valueSimplification.paletteEnabled}
-          <div class="space-y-2">
-            <label
-              for="palette-select"
-              class="text-xs font-semibold text-surface-300"
-            >
-              Palette Selection
-            </label>
-            <select
-              id="palette-select"
-              value={$imageStore.valueSimplification.selectedPalette}
-              on:change={handlePaletteChange}
-              class="w-full px-3 py-2 bg-surface-700 text-surface-50 rounded border border-surface-600 text-sm focus:outline-none focus:border-primary-500"
-            >
-              {#each Object.entries(paletteCategories) as [category, label]}
-                <optgroup {label}>
-                  {#each Object.entries(palettes) as [key, palette]}
-                    {#if palette.category === category}
-                      <option value={key}>{palette.name}</option>
-                    {/if}
-                  {/each}
-                </optgroup>
-              {/each}
-            </select>
-
-            {#if palettes[$imageStore.valueSimplification.selectedPalette]}
-              <div class="bg-surface-700 p-2 rounded">
-                <p class="text-xs text-surface-400 mb-2">
-                  {palettes[$imageStore.valueSimplification.selectedPalette]
-                    .description}
-                </p>
-                <div class="flex gap-1 flex-wrap">
-                  {#each palettes[$imageStore.valueSimplification.selectedPalette].colors as color}
-                    <div
-                      class="w-6 h-6 rounded border border-surface-600"
-                      style={`background-color: ${color}`}
-                      title={color}
-                    ></div>
-                  {/each}
-                </div>
-              </div>
-            {/if}
-          </div>
-        {/if}
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- Extracted Colors Palette -->
-      <div class="space-y-2">
-        <p class="text-sm font-medium text-surface-200">
-          Color Palette {isProcessing ? "(Processing...)" : ""}
+        <p class="hint-text">
+          {#if $imageStore.valueSimplification.paintByNumbersMode === "blocks"}
+            Solid color blocks for painting reference
+          {:else}
+            Outlined regions for drawing guide
+          {/if}
         </p>
+      {/if}
+    </section>
 
-        {#if $imageStore.valueSimplification.extractedColors.length > 0}
-          <div class="space-y-2">
-            {#each $imageStore.valueSimplification.extractedColors as color, idx (idx)}
-              <button
-                class="flex items-center gap-2 p-2 bg-surface-700 rounded hover:bg-surface-600 cursor-pointer transition-colors text-left w-full"
-                on:click={() => copyColorToClipboard(color.hex)}
-                title="Click to copy color"
-              >
-                <div
-                  class="w-8 h-8 rounded border border-surface-500"
-                  style={`background-color: rgb(${color.r}, ${color.g}, ${color.b})`}
-                  aria-label={`Color: ${color.hex}`}
-                ></div>
-                <div class="flex-1">
-                  <p class="text-xs font-mono font-semibold text-surface-50">
-                    {color.hex}
-                  </p>
-                </div>
-                <span class="text-xs text-surface-400">Copy</span>
-              </button>
-            {/each}
-          </div>
-        {:else}
-          <p class="text-xs text-surface-400">Colors will appear here</p>
-        {/if}
+    <section class="control-section">
+      <h3 class="section-header">COLOR PALETTE</h3>
+      <div class="toggle-row">
+        <span class="control-label">Apply Palette</span>
+        <button
+          class={`switch ${$imageStore.valueSimplification.paletteEnabled ? "active" : ""}`}
+          on:click={togglePalette}
+          aria-pressed={$imageStore.valueSimplification.paletteEnabled}
+        >
+          <span class="switch-thumb"></span>
+        </button>
       </div>
-    {/if}
+
+      {#if $imageStore.valueSimplification.paletteEnabled}
+        <div class="control-item">
+          <label for="palette-select" class="control-label small">Palette Selection</label>
+          <select
+            id="palette-select"
+            value={$imageStore.valueSimplification.selectedPalette}
+            on:change={handlePaletteChange}
+            class="select"
+          >
+            {#each Object.entries(paletteCategories) as [category, label]}
+              <optgroup {label}>
+                {#each Object.entries(palettes) as [key, palette]}
+                  {#if palette.category === category}
+                    <option value={key}>{palette.name}</option>
+                  {/if}
+                {/each}
+              </optgroup>
+            {/each}
+          </select>
+
+          {#if palettes[$imageStore.valueSimplification.selectedPalette]}
+            <div class="palette-preview">
+              <p class="hint-text">
+                {palettes[$imageStore.valueSimplification.selectedPalette].description}
+              </p>
+              <div class="palette-swatches">
+                {#each palettes[$imageStore.valueSimplification.selectedPalette].colors as color}
+                  <div class="swatch" style={`background-color: ${color}`} title={color}></div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </section>
+
+    <section class="control-section">
+      <h3 class="section-header">EXTRACTED COLORS</h3>
+      {#if $imageStore.valueSimplification.extractedColors.length > 0}
+        <div class="color-list">
+          {#each $imageStore.valueSimplification.extractedColors as color, idx (idx)}
+            <button class="color-row" on:click={() => copyColorToClipboard(color.hex)}>
+              <div
+                class="color-chip"
+                style={`background-color: rgb(${color.r}, ${color.g}, ${color.b})`}
+                aria-label={`Color: ${color.hex}`}
+              ></div>
+              <div class="color-meta">
+                <p class="color-hex">{color.hex}</p>
+              </div>
+              <span class="color-copy">Copy</span>
+            </button>
+          {/each}
+        </div>
+      {:else}
+        <p class="hint-text">Colors will appear here</p>
+      {/if}
+    </section>
   {/if}
 </div>
 
 <style>
-  .divider {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 0.5rem 0;
+  .adjustments-panel {
+    height: 100%;
+    padding: 24px;
+    overflow-y: auto;
   }
 
-  input[type="range"]::-webkit-slider-thumb {
+  .panel-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 12px;
+  }
+
+  .empty-message {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+  }
+
+  .control-section {
+    margin-bottom: 28px;
+  }
+
+  .section-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    margin-bottom: 14px;
+  }
+
+  .control-item {
+    margin-bottom: 16px;
+  }
+
+  .control-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .control-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .control-label.small {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+
+  .control-value {
+    font-size: 13px;
+    font-family: var(--font-family-mono);
+    color: var(--color-text-secondary);
+  }
+
+  .slider {
+    width: 100%;
+    height: 4px;
+    background: var(--color-border-subtle);
+    border-radius: 2px;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .slider::-webkit-slider-thumb {
     appearance: none;
     width: 16px;
     height: 16px;
+    background: white;
     border-radius: 50%;
-    background: rgb(var(--color-primary-500));
-    cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
   }
 
-  input[type="range"]::-moz-range-thumb {
+  .slider::-moz-range-thumb {
     width: 16px;
     height: 16px;
-    border-radius: 50%;
-    background: rgb(var(--color-primary-500));
-    cursor: pointer;
+    background: white;
     border: none;
+    border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+  }
+
+  .slider-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+    margin-top: 6px;
+  }
+
+  .preset-row,
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 10px;
+  }
+
+  .chip {
+    padding: 10px 12px;
+    background: var(--color-border-subtle);
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .chip:hover {
+    background: var(--color-border-strong);
+  }
+
+  .chip.active {
+    background: var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
+    color: white;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--color-border-subtle);
+    border: 1px solid var(--color-border-default);
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: all 150ms ease;
+  }
+
+  .switch.active {
+    background: var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
+  }
+
+  .switch.active .switch-thumb {
+    transform: translateX(18px);
+    background: white;
+  }
+
+  .select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--color-surface-700);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  .palette-preview {
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--color-surface-700);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  .palette-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border-default);
+  }
+
+  .hint-text {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    margin-top: 8px;
+  }
+
+  .color-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .color-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--color-surface-700);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-subtle);
+    cursor: pointer;
+    transition: background 120ms ease;
+    text-align: left;
+  }
+
+  .color-row:hover {
+    background: var(--color-surface-600);
+  }
+
+  .color-chip {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border-default);
+  }
+
+  .color-meta {
+    flex: 1;
+  }
+
+  .color-hex {
+    font-family: var(--font-family-mono);
+    font-size: 13px;
+    color: var(--color-text-primary);
+  }
+
+  .color-copy {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
   }
 </style>

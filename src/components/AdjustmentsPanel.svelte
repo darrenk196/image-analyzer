@@ -180,64 +180,87 @@
   }
 </script>
 
-<div class="flex flex-col gap-4 h-full bg-surface-800 p-4 rounded-lg">
-  <div class="flex items-center justify-between">
-    <h2 class="text-lg font-bold text-surface-50">Adjustments</h2>
-    <span class="text-xs text-surface-400">Live preview, apply to bake</span>
-  </div>
-
+<div class="adjustments-panel">
   {#if !$imageStore.current}
-    <p class="text-sm text-surface-400">Load an image to start editing.</p>
+    <p class="empty-message">Load an image to start editing.</p>
   {:else}
-    <div class="space-y-4">
-      <div class="space-y-3">
-        <p class="text-sm font-semibold text-surface-200">Light &amp; Color</p>
-        {#each sliders as slider}
-          <div class="space-y-1">
-            <div class="flex items-center justify-between text-xs text-surface-300">
-              <span>{slider.label}</span>
-              <span class="text-primary-300">
-                {#if slider.format}
-                  {slider.format(sliderValue(slider.key))}
-                {:else}
-                  {sliderValue(slider.key).toFixed(2)}
-                {/if}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={slider.min}
-              max={slider.max}
-              step={slider.step}
-              value={sliderValue(slider.key)}
-              on:input={(event) =>
-                updateSlider(slider.key, parseFloat(event.currentTarget.value))}
-              class="w-full h-2 bg-surface-700 rounded-lg appearance-none cursor-pointer"
-              style="accent-color: rgb(var(--color-primary-500))"
-            />
-            {#if slider.hint}
-              <p class="text-[11px] text-surface-500">{slider.hint}</p>
-            {/if}
+    <!-- LIGHT Section -->
+    <section class="control-section">
+      <h3 class="section-header">LIGHT</h3>
+      {#each sliders.slice(0, 5) as slider}
+        <div class="control-item">
+          <div class="control-label-row">
+            <span class="control-label">{slider.label}</span>
+            <span class="control-value">
+              {#if slider.format}
+                {slider.format(sliderValue(slider.key))}
+              {:else}
+                {sliderValue(slider.key).toFixed(2)}
+              {/if}
+            </span>
           </div>
-        {/each}
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <p class="text-sm font-semibold text-surface-200">Rotate</p>
-          <span class="text-xs text-primary-300">{$imageStore.adjustments.rotation.toFixed(1)}°</span>
+          <input
+            type="range"
+            min={slider.min}
+            max={slider.max}
+            step={slider.step}
+            value={sliderValue(slider.key)}
+            on:input={(event) =>
+              updateSlider(slider.key, parseFloat(event.currentTarget.value))}
+            class="slider"
+          />
         </div>
-        <div class="flex gap-2">
-          <button class="btn variant-ghost text-sm" on:click={() => rotate(-90)}>
+      {/each}
+    </section>
+
+    <!-- COLOR Section -->
+    <section class="control-section">
+      <h3 class="section-header">COLOR</h3>
+      {#each sliders.slice(5, 7) as slider}
+        <div class="control-item">
+          <div class="control-label-row">
+            <span class="control-label">{slider.label}</span>
+            <span class="control-value">
+              {#if slider.format}
+                {slider.format(sliderValue(slider.key))}
+              {:else}
+                {sliderValue(slider.key).toFixed(2)}
+              {/if}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={slider.min}
+            max={slider.max}
+            step={slider.step}
+            value={sliderValue(slider.key)}
+            on:input={(event) =>
+              updateSlider(slider.key, parseFloat(event.currentTarget.value))}
+            class="slider"
+          />
+        </div>
+      {/each}
+    </section>
+
+    <!-- ROTATION Section -->
+    <section class="control-section">
+      <h3 class="section-header">ROTATION</h3>
+      <div class="control-item">
+        <div class="control-label-row">
+          <span class="control-label">Rotate</span>
+          <span class="control-value"
+            >{$imageStore.adjustments.rotation.toFixed(1)}°</span
+          >
+        </div>
+        <div class="rotation-buttons">
+          <button class="btn-secondary btn-sm" on:click={() => rotate(-90)}>
             ↺ 90°
           </button>
-          <button class="btn variant-ghost text-sm" on:click={() => rotate(90)}>
+          <button class="btn-secondary btn-sm" on:click={() => rotate(90)}>
             ↻ 90°
           </button>
           <button
-            class="btn variant-ghost text-sm"
+            class="btn-secondary btn-sm"
             on:click={() => updateSlider("rotation", 0)}
           >
             Reset
@@ -248,93 +271,259 @@
           min={-45}
           max={45}
           step={0.5}
-            value={sliderValue("rotation")}
+          value={sliderValue("rotation")}
           on:input={(event) =>
             updateSlider("rotation", parseFloat(event.currentTarget.value))}
-          class="w-full h-2 bg-surface-700 rounded-lg appearance-none cursor-pointer"
-          style="accent-color: rgb(var(--color-primary-500))"
+          class="slider"
         />
       </div>
+    </section>
 
-      <div class="divider"></div>
+    <!-- CROP Section -->
+    <section class="control-section">
+      <h3 class="section-header">CROP</h3>
+      <button
+        class="btn-crop-toggle"
+        class:active={$imageStore.adjustments.cropMode}
+        on:click={toggleCropMode}
+      >
+        {$imageStore.adjustments.cropMode ? "✓ Cropping" : "✂️ Start Crop"}
+      </button>
 
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <p class="text-sm font-semibold text-surface-200">Crop</p>
+      {#if $imageStore.adjustments.cropMode}
+        <div class="crop-presets">
+          {#each aspectPresets as preset}
+            <button class="btn-preset" on:click={() => setAspect(preset)}>
+              {preset}
+            </button>
+          {/each}
         </div>
-
-        <button
-          class={`btn w-full ${
-            $imageStore.adjustments.cropMode
-              ? "variant-filled-primary"
-              : "variant-ghost"
-          }`}
-          on:click={toggleCropMode}
-        >
-          {$imageStore.adjustments.cropMode ? "✓ Cropping" : "✂️ Start Crop"}
-        </button>
-
-        {#if $imageStore.adjustments.cropMode}
-          <div class="flex flex-wrap gap-2">
-            {#each aspectPresets as preset}
-              <button
-                class={`btn text-xs py-1 variant-soft`}
-                on:click={() => setAspect(preset)}
-              >
-                {preset}
-              </button>
-            {/each}
-          </div>
-
-          <p class="text-xs text-surface-400">
-            Drag corners or edges on the canvas to adjust the crop area. Grid shows rule of thirds.
-          </p>
-        {/if}
-      </div>
-
-      {#if errorMessage}
-        <div class="p-2 rounded bg-error-900 text-error-100 text-xs">
-          {errorMessage}
-        </div>
+        <p class="hint-text">
+          Drag corners or edges on the canvas to adjust the crop area. Grid
+          shows rule of thirds.
+        </p>
       {/if}
+    </section>
 
-      <div class="flex gap-2">
-        <button
-          class="btn variant-filled-primary flex-1"
-          on:click={applyAll}
-          disabled={isApplying}
-        >
+    <!-- Apply Section -->
+    <div class="apply-section">
+      {#if errorMessage}
+        <div class="error-message">{errorMessage}</div>
+      {/if}
+      <div class="apply-buttons">
+        <button class="btn-primary" on:click={applyAll} disabled={isApplying}>
           {isApplying ? "Applying..." : "Apply to image"}
         </button>
-        <button class="btn variant-ghost" on:click={resetAdjustments}>Reset</button>
+        <button class="btn-secondary" on:click={resetAdjustments}>Reset</button>
       </div>
     </div>
   {/if}
 </div>
 
 <style>
-  .divider {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 0.25rem 0;
+  .adjustments-panel {
+    height: 100%;
+    padding: 24px;
+    overflow-y: auto;
   }
 
-  input[type="range"]::-webkit-slider-thumb {
+  .empty-message {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  .control-section {
+    margin-bottom: 32px;
+  }
+
+  .section-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    margin-bottom: 16px;
+  }
+
+  .control-item {
+    margin-bottom: 20px;
+  }
+
+  .control-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .control-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .control-value {
+    font-size: 13px;
+    font-family: var(--font-family-mono);
+    color: var(--color-text-secondary);
+  }
+
+  .slider {
+    width: 100%;
+    height: 4px;
+    background: var(--color-border-subtle);
+    border-radius: 2px;
+    outline: none;
     appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 999px;
-    background: rgb(var(--color-primary-500));
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
     cursor: pointer;
   }
 
-  input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border-radius: 999px;
-    background: rgb(var(--color-primary-500));
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-    border: none;
+  .slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     cursor: pointer;
+  }
+
+  .slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+  }
+
+  .rotation-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .btn-crop-toggle {
+    width: 100%;
+    height: 36px;
+    padding: 0 16px;
+    background: transparent;
+    border: 1px solid var(--color-border-default);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all 150ms ease;
+    margin-bottom: 12px;
+  }
+
+  .btn-crop-toggle:hover {
+    background: var(--color-border-subtle);
+  }
+
+  .btn-crop-toggle.active {
+    background: var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
+    color: white;
+  }
+
+  .crop-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .btn-preset {
+    padding: 6px 12px;
+    background: var(--color-border-subtle);
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .btn-preset:hover {
+    background: var(--color-border-strong);
+  }
+
+  .hint-text {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    line-height: 1.5;
+  }
+
+  .apply-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  .error-message {
+    padding: 12px;
+    margin-bottom: 12px;
+    background: var(--color-error);
+    border-radius: 6px;
+    font-size: 13px;
+    color: white;
+  }
+
+  .apply-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    flex: 1;
+    height: 36px;
+    padding: 0 20px;
+    background: var(--color-accent-primary);
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    height: 36px;
+    padding: 0 16px;
+    background: transparent;
+    border: 1px solid var(--color-border-default);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-border-subtle);
+  }
+
+  .btn-sm {
+    flex: 1;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
   }
 </style>
